@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using System.Diagnostics;
 using System.Reflection;
 using System.CodeDom;
+using Microsoft.Extensions.DependencyModel;
 
 namespace IntellisenseNoCopyPasta.Controllers
 {
@@ -41,6 +42,34 @@ namespace IntellisenseNoCopyPasta.Controllers
 
             return View("CodeResult");
 
+            #region oldCode
+            //// Dynamically compile the user's code
+            //Assembly compiledAssembly = CompileUserCode(codeContent, out List<string> compilationErrors);
+
+            //if (compiledAssembly != null)
+            //{
+            //    // If compilation was successful, verify the class
+            //    bool classExists = VerifyStaticAsyncClass(compiledAssembly, "UserNamespace.MyAsyncClass");
+
+            //    if (classExists)
+            //    {
+            //        ViewBag.Message = "The public static async class `MyAsyncClass` was correctly created.";
+            //    }
+            //    else
+            //    {
+            //        ViewBag.Message = "The public static async class `MyAsyncClass` was not created correctly.";
+            //    }
+            //}
+            //else
+            //{
+            //    // If there were compilation errors, show them
+            //    ViewBag.Message = "Compilation failed with the following errors: " + string.Join(", ", compilationErrors);
+            //}
+
+            //return View("CodeResult");
+
+            // ========================
+
             //Assembly compiledAssembly = CompileUserCode(CodeContent, out List<string> compilerErrors);
 
             //// Process the submitted code content
@@ -50,6 +79,7 @@ namespace IntellisenseNoCopyPasta.Controllers
             //ViewBag.CodeContent = CodeContent;
 
             //return View("CodeResult");
+            #endregion
         }
 
         private Assembly CompileUserCode(string codeContent, out List<string> compilationErrors)
@@ -62,14 +92,8 @@ namespace IntellisenseNoCopyPasta.Controllers
             // Define the compilation options
             CSharpCompilationOptions options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
 
-            // Reference the necessary assemblies (e.g., mscorlib, System, etc.)
-            List<MetadataReference> references = new List<MetadataReference>
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location), // mscorlib
-                MetadataReference.CreateFromFile(typeof(Task).Assembly.Location),   // System.Threading.Tasks
-                MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location), // System.Linq
-                MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location) // .NET Standard
-            };
+            // Reference the necessary assemblies from .NET Core runtime
+            List<MetadataReference> references = GetReferences();
 
             // Create the compilation
             CSharpCompilation compilation = CSharpCompilation.Create(
@@ -101,7 +125,144 @@ namespace IntellisenseNoCopyPasta.Controllers
                 ms.Seek(0, SeekOrigin.Begin);
                 return Assembly.Load(ms.ToArray());
             }
+
+            #region oldCode
+            //compilationErrors = new List<string>();
+
+            //// Define the syntax tree for the user's code
+            //SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(codeContent);
+
+            //// Define the compilation options
+            //CSharpCompilationOptions options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
+
+            //// Reference the necessary assemblies (e.g., mscorlib, System, etc.)
+            //List<MetadataReference> references = new List<MetadataReference>
+            //{
+            //    MetadataReference.CreateFromFile(typeof(object).Assembly.Location), // mscorlib
+            //    MetadataReference.CreateFromFile(typeof(Task).Assembly.Location),   // System.Threading.Tasks
+            //    MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location), // System.Linq
+            //    MetadataReference.CreateFromFile(Assembly.Load("netstandard").Location) // .NET Standard
+            //};
+
+            //// Create the compilation
+            //CSharpCompilation compilation = CSharpCompilation.Create(
+            //    "UserSubmissionAssembly",
+            //    new[] { syntaxTree },
+            //    references,
+            //    options);
+
+            //// Compile the code into a memory stream
+            //using (var ms = new MemoryStream())
+            //{
+            //    EmitResult result = compilation.Emit(ms);
+
+            //    if (!result.Success)
+            //    {
+            //        // If compilation failed, capture the errors
+            //        foreach (Diagnostic diagnostic in result.Diagnostics)
+            //        {
+            //            if (diagnostic.Severity == DiagnosticSeverity.Error)
+            //            {
+            //                compilationErrors.Add(diagnostic.ToString());
+            //            }
+            //        }
+
+            //        return null;
+            //    }
+
+            //    // Load the compiled assembly from the memory stream
+            //    ms.Seek(0, SeekOrigin.Begin);
+            //    return Assembly.Load(ms.ToArray());
+            //}
+            #endregion
         }
+
+        private List<MetadataReference> GetReferences()
+        {
+            var assemblies = new List<MetadataReference>();
+
+            // Get all assemblies from DependencyContext (this includes all the references in the project)
+            var assemblyPaths = DependencyContext.Default.CompileLibraries
+                .SelectMany(cl => cl.ResolveReferencePaths())
+                .Distinct();
+
+            // Add them as metadata references
+            foreach (var assemblyPath in assemblyPaths)
+            {
+                assemblies.Add(MetadataReference.CreateFromFile(assemblyPath));
+            }
+
+            // Add specific .NET Core assemblies that might be needed
+            var coreAssemblyLocations = new[]
+            {
+                typeof(object).GetTypeInfo().Assembly.Location,        // System.Private.CoreLib
+                typeof(Console).GetTypeInfo().Assembly.Location,       // System.Console
+                typeof(Enumerable).GetTypeInfo().Assembly.Location,    // System.Linq
+                typeof(Task).GetTypeInfo().Assembly.Location,          // System.Threading.Tasks
+                Assembly.Load("netstandard").Location,                 // netstandard
+                Assembly.Load("System.Runtime").Location               // System.Runtime (This is essential)
+            };
+
+            foreach (var location in coreAssemblyLocations)
+            {
+                if (!assemblies.Any(r => r.Display == location))
+                {
+                    assemblies.Add(MetadataReference.CreateFromFile(location));
+                }
+            }
+
+            return assemblies;
+        }
+
+        //private List<MetadataReference> GetReferences()
+        //{
+        //    var assemblies = new List<MetadataReference>();
+
+        //    // Get all assemblies from DependencyContext (this includes all the references in the project)
+        //    var assemblyPaths = DependencyContext.Default.CompileLibraries
+        //        .SelectMany(cl => cl.ResolveReferencePaths())
+        //        .Distinct();
+
+        //    // Add them as metadata references
+        //    foreach (var assemblyPath in assemblyPaths)
+        //    {
+        //        assemblies.Add(MetadataReference.CreateFromFile(assemblyPath));
+        //    }
+
+        //    // Add specific .NET Core assemblies that might be needed
+        //    var coreAssemblyLocations = new[]
+        //    {
+        //        typeof(object).GetTypeInfo().Assembly.Location,
+        //        typeof(Object).GetTypeInfo().Assembly.Location,
+        //        typeof(Console).GetTypeInfo().Assembly.Location,
+        //        typeof(Enumerable).GetTypeInfo().Assembly.Location,
+        //        typeof(Task).GetTypeInfo().Assembly.Location,
+        //        Assembly.Load("netstandard").Location
+        //    };
+
+        //    foreach (var location in coreAssemblyLocations)
+        //    {
+        //        if (!assemblies.Any(r => r.Display == location))
+        //        {
+        //            assemblies.Add(MetadataReference.CreateFromFile(location));
+        //        }
+        //    }
+
+        //    return assemblies;
+        //}
+
+        //private List<MetadataReference> GetReferences()
+        //{
+        //    // Get references for .NET Core assemblies
+        //    var assemblies = DependencyContext.Default.CompileLibraries
+        //        .SelectMany(cl => cl.ResolveReferencePaths())
+        //        .Distinct()
+        //        .Select(assemblyPath => MetadataReference.CreateFromFile(assemblyPath))
+        //        .Cast<MetadataReference>()
+        //        .ToList();
+
+        //    return assemblies;
+        //}
 
         //private bool VerifyStaticAsyncClass(Assembly assembly, string className)
         //{
