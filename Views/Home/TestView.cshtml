@@ -1,0 +1,98 @@
+﻿@* @model YourNamespace.Models.YourModel *@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>C# IntelliSense in MVC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs/editor/editor.main.css" />
+</head>
+<body>
+    <form id="codeForm" method="post" action="/Home/ProcessCode">
+        <input type="hidden" id="codeContent" name="CodeContent" />
+
+        <div id="editor" style="height: 500px; width: 100%;"></div>
+
+        <button type="submit">Submit Code</button>
+    </form>
+
+    <div id="editor" style="height: 500px; width: 100%;"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs/loader.js"></script>
+    <script>
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            var editor = monaco.editor.create(document.getElementById('editor'), {
+                value: "using System;",
+                language: "csharp",
+                theme: "vs-dark"
+            });
+
+            // Custom IntelliSense logic (example)
+            monaco.languages.registerCompletionItemProvider('csharp', {
+                provideCompletionItems: () => {
+                    return {
+                        suggestions: [
+                            {
+                                label: 'Console.WriteLine',
+                                kind: monaco.languages.CompletionItemKind.Function,
+                                insertText: 'Console.WriteLine("");',
+                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                documentation: 'Writes the specified string value, followed by the current line terminator, to the standard output stream.'
+                            }
+                        ]
+                    };
+                }
+            });
+
+
+            // // Disable Copy, Cut, and Paste
+            // editor.onKeyDown(function (e) {
+            //     if ((e.ctrlKey || e.metaKey) && (e.keyCode === monaco.KeyCode.KeyC || e.keyCode === monaco.KeyCode.KeyV || e.keyCode === monaco.KeyCode.KeyX)) {
+            //         e.preventDefault();
+            //     }
+            // });
+
+            // // Disable context menu
+            // editor.onContextMenu(function (e) {
+            //     e.preventDefault();
+            // });
+
+            // // Disable paste with the mouse
+            // editor.onDidPaste(function (e) {
+            //     e.preventDefault();
+            // });
+
+            // // Disable copying with right-click
+            // document.addEventListener('copy', function (e) {
+            //     e.preventDefault();
+            // });
+
+            // // Disable cutting with right-click
+            // document.addEventListener('cut', function (e) {
+            //     e.preventDefault();
+            // });
+
+            // // Disable pasting with right-click
+            // document.addEventListener('paste', function (e) {
+            //     e.preventDefault();
+            // });
+
+            // Before submitting the form, set the content of the editor to the hidden field
+            document.getElementById('codeForm').addEventListener('submit', function () {
+                document.getElementById('codeContent').value = editor.getValue();
+            });
+
+        });
+    </script>
+</body>
+</html>
+
+
+@* 
+@{
+    ViewData["Title"] = "View";
+}
+
+<h1>View</h1>
+
+ *@
