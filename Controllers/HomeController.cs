@@ -125,16 +125,6 @@ namespace IntellisenseNoCopyPasta.Controllers
             return assemblies;
         }
 
-        private Assembly CompileUserCode(string codeContent)
-        {
-            // Logic to compile the codeContent into an assembly
-            // This can be done using Roslyn or another C# compiler
-            // For simplicity, let's assume the compilation was successful and return an assembly.
-            // This method would actually return the compiled assembly from the user's submitted code.
-
-            return Assembly.LoadFrom("UserSubmission.dll");
-        }
-
         private bool VerifyStaticAsyncClass(Assembly assembly, string className)
         {
             Type asyncClassType = assembly.GetType(className);
